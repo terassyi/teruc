@@ -1,0 +1,31 @@
+name: Test
+on: [push]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fmt
+        run: cargo fmt --all --check
+  unit-test:
+    name: Unit Test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Unit Test
+        run: cargo test
+  e2e-test:
+    name: End to End Test
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and Move
+        run: cargo build && mv target/debug/teruc ./e2e
+      - name: End to End Test
+        run: e2e/test.sh
+

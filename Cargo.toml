@@ -1,4 +1,8 @@
 [workspace]
 resolver = "2"
 
-members = ["asm", "teruc"]
+members = ["asm", "teruc", "tokenizer"]
+
+[workspace.dependencies]
+thiserror = "1.0.64"
+rstest = "0.23.0"
