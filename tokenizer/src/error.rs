@@ -6,4 +6,6 @@ pub enum Error {
     UnknownToken(char),
     #[error("failed to tokenize")]
     FailedToTokenize,
+    #[error("failed to parse to number")]
+    FailedToParseToNum,
 }

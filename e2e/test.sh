@@ -18,8 +18,8 @@ assert() {
 }
 
 assert 0 0
-assert 4 4
+assert 42 42
 
-assert 4 " 1 + 8 - 5 "
+assert 41 " 12 + 34 - 5 "
 
 echo OK
