@@ -1,25 +1,15 @@
 use std::{iter::Peekable, str::Chars};
 
 use error::Error;
-use reserved::{MINUS, PLUS, WHITE_SPACE};
+use token::{reserved, Token};
 
 mod error;
-mod reserved;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Token {
-    Reserved(char),
-    Num(u64),
-    Eof,
-}
-
-pub struct Tokenizer {
-    token: Option<Token>,
-}
+pub struct Tokenizer {}
 
 impl Tokenizer {
     fn new() -> Self {
-        Self { token: None }
+        Self {}
     }
 
     pub fn process(&self, src: String) -> Result<Vec<Token>, Error> {
@@ -28,10 +18,13 @@ impl Tokenizer {
 
         while let Some(p) = chars.next() {
             match p {
-                WHITE_SPACE => {}
-                PLUS | MINUS => {
-                    tokens.push(Token::Reserved(p));
-                }
+                reserved::WHITE_SPACE => {}
+                reserved::PLUS => tokens.push(Token::Add),
+                reserved::MINUS => tokens.push(Token::Sub),
+                reserved::ASTERISK => tokens.push(Token::Mul),
+                reserved::SLASH => tokens.push(Token::Div),
+                reserved::OPEN_PAREN => tokens.push(Token::OpenParen),
+                reserved::CLOSE_PAREN => tokens.push(Token::CloseParen),
                 _ => {
                     if p.is_ascii_digit() {
                         let n = get_num(&mut chars, p)?;
@@ -75,8 +68,9 @@ mod tests {
     use rstest::rstest;
 
     use crate::get_num;
+    use crate::Tokenizer;
 
-    use super::{Token, Tokenizer};
+    use token::Token;
 
     #[rstest(
         input,
@@ -106,14 +100,18 @@ mod tests {
         case(" ", vec![]),
         case("0", vec![Token::Num(0)]),
         case("10", vec![Token::Num(10)]),
-        case("+", vec![Token::Reserved('+')]),
+        case("+", vec![Token::Add]),
         case(" 0", vec![Token::Num(0)]),
         case("0   ", vec![Token::Num(0)]),
-        case("0+1", vec![Token::Num(0), Token::Reserved('+'), Token::Num(1)]),
-        case("0 + 1", vec![Token::Num(0), Token::Reserved('+'), Token::Num(1)]),
-        case("0 +  1", vec![Token::Num(0), Token::Reserved('+'), Token::Num(1)]),
-        case("10 +  1", vec![Token::Num(10), Token::Reserved('+'), Token::Num(1)]),
-        case("100 + 1100 - 200", vec![Token::Num(100), Token::Reserved('+'), Token::Num(1100), Token::Reserved('-'), Token::Num(200)]),
+        case("0+1", vec![Token::Num(0), Token::Add, Token::Num(1)]),
+        case("0 + 1", vec![Token::Num(0), Token::Add, Token::Num(1)]),
+        case("0 +  1", vec![Token::Num(0), Token::Add, Token::Num(1)]),
+        case("10 +  1", vec![Token::Num(10), Token::Add, Token::Num(1)]),
+        case("100 + 1100 - 200", vec![Token::Num(100), Token::Add, Token::Num(1100), Token::Sub, Token::Num(200)]),
+        case("100 * 2", vec![Token::Num(100), Token::Mul, Token::Num(2)]),
+        case("100/2", vec![Token::Num(100), Token::Div, Token::Num(2)]),
+        case("1+2*3", vec![Token::Num(1), Token::Add, Token::Num(2), Token::Mul, Token::Num(3)]),
+        case("1*2+(3+4)", vec![Token::Num(1), Token::Mul, Token::Num(2), Token::Add, Token::OpenParen, Token::Num(3), Token::Add, Token::Num(4), Token::CloseParen]),
     )]
     fn test_tokenizer_process(input: &str, expect: Vec<Token>) {
         let tokenizer = Tokenizer::default();

@@ -1,7 +1,8 @@
 use asm::x86::intel::constants;
 use clap::Parser;
 use cmd::Args;
-use tokenizer::{Token, Tokenizer};
+use parser::parser;
+use tokenizer::Tokenizer;
 
 mod cmd;
 
@@ -11,29 +12,15 @@ fn main() {
     pre_process();
 
     let tokenizer = Tokenizer::default();
-    let mut tokens = tokenizer.process(args.input).unwrap();
-    let mut token_iter = tokens.iter_mut();
+    let tokens = tokenizer.process(args.input).unwrap();
 
-    if let Some(Token::Num(n)) = token_iter.next() {
-        println!("  mov rax, {}", n);
-    } else {
-        panic!("First token should be number");
-    }
+    let mut parser = parser::Parser::new(tokens);
+    let node = parser.parse().unwrap();
 
-    while let Some(t) = token_iter.next() {
-        if let Token::Reserved(p) = t {
-            if '+'.eq(p) {
-                if let Some(Token::Num(n)) = token_iter.next() {
-                    println!("  add rax, {}", n)
-                }
-            } else if '-'.eq(p) {
-                if let Some(Token::Num(n)) = token_iter.next() {
-                    println!("  sub rax, {}", n)
-                }
-            }
-        }
-    }
-    println!("  ret")
+    generator::generate(node).unwrap();
+
+    println!("\tpop rax");
+    println!("\tret")
 }
 
 fn pre_process() {

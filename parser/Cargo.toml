@@ -1,9 +1,10 @@
 [package]
-name = "tokenizer"
+name = "parser"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 thiserror = { workspace = true }
 rstest = { workspace = true }
+tokenizer = { path = "../tokenizer" }
 token = { path = "../token" }
