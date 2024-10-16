@@ -20,18 +20,17 @@ impl Parser {
     }
 
     pub fn parse(&mut self) -> Result<Node, Error> {
-        let mut iter = self.tokens.iter();
         self.expr()
     }
 
     // primary = num | "(" expr ")"
     fn primary(&mut self) -> Result<Node, Error> {
-        if let Some(t) = self.tokens.get(0) {
+        if let Some(t) = self.tokens.front() {
             if t.eq(&Token::OpenParen) {
                 // continue to parse expr
                 self.tokens.pop_front(); // consume
                 let node = self.expr()?;
-                if let Some(t) = self.tokens.get(0) {
+                if let Some(t) = self.tokens.front() {
                     if t.eq(&Token::CloseParen) {
                         self.tokens.pop_front(); // consume
                         Ok(node)
@@ -56,7 +55,7 @@ impl Parser {
     fn expr(&mut self) -> Result<Node, Error> {
         let mut node = self.mul()?;
 
-        while let Some(p) = self.tokens.get(0) {
+        while let Some(p) = self.tokens.front() {
             match p {
                 Token::Add => {
                     self.tokens.pop_front(); // consume
@@ -80,18 +79,18 @@ impl Parser {
         Ok(node)
     }
 
-    // mul = primary ("*" primary | "/" primary)*
+    // mul = unary ("*" unary | "/" unary)*
     fn mul(&mut self) -> Result<Node, Error> {
-        let mut node = self.primary()?;
+        let mut node = self.unary()?;
 
-        while let Some(p) = self.tokens.get(0) {
+        while let Some(p) = self.tokens.front() {
             match p {
                 Token::Mul => {
                     self.tokens.pop_front(); // consume
                     node = Node::new(
                         NodeKind::Mul,
                         Some(Box::new(node)),
-                        Some(Box::new(self.primary()?)),
+                        Some(Box::new(self.unary()?)),
                     );
                 }
                 Token::Div => {
@@ -99,7 +98,7 @@ impl Parser {
                     node = Node::new(
                         NodeKind::Div,
                         Some(Box::new(node)),
-                        Some(Box::new(self.primary()?)),
+                        Some(Box::new(self.unary()?)),
                     );
                 }
                 _ => return Ok(node),
@@ -107,6 +106,29 @@ impl Parser {
         }
 
         Ok(node)
+    }
+
+    // unary = ("+" | "-")? primary
+    fn unary(&mut self) -> Result<Node, Error> {
+        if let Some(p) = self.tokens.front() {
+            match p {
+                Token::Add => {
+                    self.tokens.pop_front();
+                    self.primary()
+                }
+                Token::Sub => {
+                    self.tokens.pop_front();
+                    Ok(Node::new(
+                        NodeKind::Sub,
+                        Some(Box::new(Node::new_num(0))),
+                        Some(Box::new(self.primary()?)),
+                    ))
+                }
+                _ => self.primary(),
+            }
+        } else {
+            Err(Error::InvalidTermination)
+        }
     }
 }
 
@@ -137,6 +159,10 @@ mod tests {
         case(
             vec![Token::Num(0), Token::Add, Token::OpenParen, Token::Num(2), Token::Add, Token::Num(1), Token::CloseParen, Token::Mul, Token::Num(1)],
             Node::new(NodeKind::Add, Some(Box::new(Node::new_num(0))), Some(Box::new(Node::new(NodeKind::Mul, Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new_num(1)))))), Some(Box::new(Node::new_num(1)))))))
+        ),
+        case(
+            vec![Token::Sub, Token::Num(2)],
+            Node::new(NodeKind::Sub, Some(Box::new(Node::new_num(0))), Some(Box::new(Node::new_num(2))))
         ),
     )]
     fn test_parser_parse(input: Vec<Token>, expect: Node) {
