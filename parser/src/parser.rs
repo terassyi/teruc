@@ -7,6 +7,16 @@ use crate::{
     error::Error,
 };
 
+/*
+expr       = equality
+equality   = relational ("==" relational | "!=" relational)*
+relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+add        = mul ("+" mul | "-" mul)*
+mul        = unary ("*" unary | "/" unary)*
+unary      = ("+" | "-")? primary
+primary    = num | "(" expr ")"
+ */
+
 #[derive(Debug)]
 pub struct Parser {
     tokens: VecDeque<Token>,
@@ -51,32 +61,9 @@ impl Parser {
         }
     }
 
-    // expr = mul ("+" mul | "-" mul)*
+    // expr = equality
     fn expr(&mut self) -> Result<Node, Error> {
-        let mut node = self.mul()?;
-
-        while let Some(p) = self.tokens.front() {
-            match p {
-                Token::Add => {
-                    self.tokens.pop_front(); // consume
-                    node = Node::new(
-                        NodeKind::Add,
-                        Some(Box::new(node)),
-                        Some(Box::new(self.mul()?)),
-                    )
-                }
-                Token::Sub => {
-                    self.tokens.pop_front(); // consume
-                    node = Node::new(
-                        NodeKind::Sub,
-                        Some(Box::new(node)),
-                        Some(Box::new(self.mul()?)),
-                    )
-                }
-                _ => return Ok(node),
-            }
-        }
-        Ok(node)
+        self.equality()
     }
 
     // mul = unary ("*" unary | "/" unary)*
@@ -130,6 +117,118 @@ impl Parser {
             Err(Error::InvalidTermination)
         }
     }
+
+    // equality = relational ("==" relational | "!=" relational)*
+    fn equality(&mut self) -> Result<Node, Error> {
+        let mut node = self.relational()?;
+        while let Some(p) = self.tokens.front() {
+            match p {
+                Token::Equal => {
+                    self.tokens.pop_front(); // consume
+                    node = Node::new(
+                        NodeKind::Equal,
+                        Some(Box::new(node)),
+                        Some(Box::new(self.relational()?)),
+                    )
+                }
+                Token::NotEqual => {
+                    self.tokens.pop_front(); // consume
+                    node = Node::new(
+                        NodeKind::NotEqual,
+                        Some(Box::new(node)),
+                        Some(Box::new(self.relational()?)),
+                    )
+                }
+                _ => return Ok(node),
+            }
+        }
+        Ok(node)
+    }
+
+    // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+    fn relational(&mut self) -> Result<Node, Error> {
+        let mut node = self.add()?;
+        while let Some(p) = self.tokens.front() {
+            match p {
+                Token::LessThan => {
+                    self.tokens.pop_front(); // consume
+                    node = Node::new(
+                        NodeKind::LessThan,
+                        Some(Box::new(node)),
+                        Some(Box::new(self.add()?)),
+                    )
+                }
+                // GreaterThan(lhs, rhs) is translate to LessThan(rhs, lhs)
+                Token::GreaterThan => {
+                    self.tokens.pop_front(); // consume
+
+                    // node = Node::new(
+                    //     NodeKind::GreaterThan,
+                    //     Some(Box::new(node)),
+                    //     Some(Box::new(self.add()?)),
+                    // )
+                    node = Node::new(
+                        NodeKind::LessThan,
+                        Some(Box::new(self.add()?)),
+                        Some(Box::new(node)),
+                    )
+                }
+                Token::LessThanOrEqual => {
+                    self.tokens.pop_front(); // consume
+                    node = Node::new(
+                        NodeKind::LessThanOrEqual,
+                        Some(Box::new(node)),
+                        Some(Box::new(self.add()?)),
+                    )
+                }
+                // GreaterThanOrEqual(lhs, rhs) is translate to LessThanOrEqual(rhs, lhs)
+                Token::GreaterThanOrEqual => {
+                    self.tokens.pop_front(); // consume
+
+                    // node = Node::new(
+                    //     NodeKind::GreaterThanOrEqual,
+                    //     Some(Box::new(node)),
+                    //     Some(Box::new(self.add()?)),
+                    // )
+                    node = Node::new(
+                        NodeKind::LessThanOrEqual,
+                        Some(Box::new(self.add()?)),
+                        Some(Box::new(node)),
+                    )
+                }
+                _ => return Ok(node),
+            }
+        }
+        Ok(node)
+    }
+
+    // add = mul ("+" mul | "-" mul)*
+    fn add(&mut self) -> Result<Node, Error> {
+        let mut node = self.mul()?;
+
+        while let Some(p) = self.tokens.front() {
+            match p {
+                Token::Add => {
+                    self.tokens.pop_front(); // consume
+                    node = Node::new(
+                        NodeKind::Add,
+                        Some(Box::new(node)),
+                        Some(Box::new(self.mul()?)),
+                    )
+                }
+                Token::Sub => {
+                    self.tokens.pop_front(); // consume
+                    node = Node::new(
+                        NodeKind::Sub,
+                        Some(Box::new(node)),
+                        Some(Box::new(self.mul()?)),
+                    )
+                }
+                _ => return Ok(node),
+            }
+        }
+        Ok(node)
+    }
 }
 
 #[cfg(test)]
@@ -163,6 +262,22 @@ mod tests {
         case(
             vec![Token::Sub, Token::Num(2)],
             Node::new(NodeKind::Sub, Some(Box::new(Node::new_num(0))), Some(Box::new(Node::new_num(2))))
+        ),
+        case(
+            vec![Token::Num(2), Token::Equal, Token::Num(2)],
+            Node::new(NodeKind::Equal, Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new_num(2))))
+        ),
+        case(
+            vec![Token::Num(2), Token::LessThan, Token::Num(2)],
+            Node::new(NodeKind::LessThan, Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new_num(2))))
+        ),
+        case(
+            vec![Token::Num(2), Token::Equal, Token::Num(2), Token::LessThanOrEqual, Token::Num(1)],
+            Node::new(NodeKind::Equal,Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new(NodeKind::LessThanOrEqual, Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new_num(1)))))))
+        ),
+        case(
+            vec![Token::Num(2), Token::Equal, Token::Num(2), Token::GreaterThan, Token::Num(1)],
+            Node::new(NodeKind::Equal,Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new(NodeKind::LessThan, Some(Box::new(Node::new_num(1))), Some(Box::new(Node::new_num(2)))))))
         ),
     )]
     fn test_parser_parse(input: Vec<Token>, expect: Node) {

@@ -25,6 +25,22 @@ impl Tokenizer {
                 reserved::SLASH => tokens.push(Token::Div),
                 reserved::OPEN_PAREN => tokens.push(Token::OpenParen),
                 reserved::CLOSE_PAREN => tokens.push(Token::CloseParen),
+                reserved::EQUAL => {
+                    let t = self.process_equal(&mut chars)?;
+                    tokens.push(t);
+                }
+                reserved::EXCLAMATION => {
+                    let t = self.process_exclamation(&mut chars)?;
+                    tokens.push(t);
+                }
+                reserved::LESS_THAN => {
+                    let t = self.process_less_than(&mut chars)?;
+                    tokens.push(t);
+                }
+                reserved::GREATER_THAN => {
+                    let t = self.process_greater_than(&mut chars)?;
+                    tokens.push(t);
+                }
                 _ => {
                     if p.is_ascii_digit() {
                         let n = get_num(&mut chars, p)?;
@@ -37,6 +53,69 @@ impl Tokenizer {
         }
 
         Ok(tokens)
+    }
+
+    fn process_equal(&self, chars: &mut Peekable<Chars>) -> Result<Token, Error> {
+        if let Some(p) = chars.peek() {
+            match *p {
+                reserved::WHITE_SPACE => Ok(Token::Assignment),
+                reserved::EQUAL => {
+                    let _ = chars.next();
+                    Ok(Token::Equal)
+                }
+                _ => {
+                    // err
+                    Err(Error::FailedToTokenize)
+                }
+            }
+        } else {
+            Err(Error::FailedToTokenize)
+        }
+    }
+
+    fn process_exclamation(&self, chars: &mut Peekable<Chars>) -> Result<Token, Error> {
+        if let Some(p) = chars.peek() {
+            match *p {
+                reserved::WHITE_SPACE => Ok(Token::Not),
+                reserved::EQUAL => {
+                    let _ = chars.next();
+                    Ok(Token::NotEqual)
+                }
+                _ => Err(Error::FailedToTokenize),
+            }
+        } else {
+            Err(Error::FailedToTokenize)
+        }
+    }
+
+    fn process_less_than(&self, chars: &mut Peekable<Chars>) -> Result<Token, Error> {
+        if let Some(p) = chars.peek() {
+            match *p {
+                reserved::WHITE_SPACE => Ok(Token::LessThan),
+                reserved::EQUAL => {
+                    let _ = chars.next();
+                    Ok(Token::LessThanOrEqual)
+                }
+                _ => Err(Error::FailedToTokenize),
+            }
+        } else {
+            Err(Error::FailedToTokenize)
+        }
+    }
+
+    fn process_greater_than(&self, chars: &mut Peekable<Chars>) -> Result<Token, Error> {
+        if let Some(p) = chars.peek() {
+            match *p {
+                reserved::WHITE_SPACE => Ok(Token::GreaterThan),
+                reserved::EQUAL => {
+                    let _ = chars.next();
+                    Ok(Token::GreaterThanOrEqual)
+                }
+                _ => Err(Error::FailedToTokenize),
+            }
+        } else {
+            Err(Error::FailedToTokenize)
+        }
     }
 }
 
@@ -112,6 +191,12 @@ mod tests {
         case("100/2", vec![Token::Num(100), Token::Div, Token::Num(2)]),
         case("1+2*3", vec![Token::Num(1), Token::Add, Token::Num(2), Token::Mul, Token::Num(3)]),
         case("1*2+(3+4)", vec![Token::Num(1), Token::Mul, Token::Num(2), Token::Add, Token::OpenParen, Token::Num(3), Token::Add, Token::Num(4), Token::CloseParen]),
+        case("0 == 0", vec![Token::Num(0), Token::Equal, Token::Num(0)]),
+        case("0 != 0", vec![Token::Num(0), Token::NotEqual, Token::Num(0)]),
+        case("0 < 0", vec![Token::Num(0), Token::LessThan, Token::Num(0)]),
+        case("0 <= 0", vec![Token::Num(0), Token::LessThanOrEqual, Token::Num(0)]),
+        case("0 > 0", vec![Token::Num(0), Token::GreaterThan, Token::Num(0)]),
+        case("0 >= 0", vec![Token::Num(0), Token::GreaterThanOrEqual, Token::Num(0)]),
     )]
     fn test_tokenizer_process(input: &str, expect: Vec<Token>) {
         let tokenizer = Tokenizer::default();

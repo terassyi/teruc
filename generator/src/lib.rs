@@ -30,6 +30,26 @@ pub fn generate(node: Node) -> Result<(), Error> {
             println!("\tcqo");
             println!("\tidiv rax, rdi");
         }
+        NodeKind::Equal => {
+            println!("\tcmp rax, rdi");
+            println!("\tsete al");
+            println!("\tmovzb rax, al");
+        }
+        NodeKind::NotEqual => {
+            println!("\tcmp rax, rdi");
+            println!("\tsetne al");
+            println!("\tmovzb rax, al");
+        }
+        NodeKind::LessThan => {
+            println!("\tcmp rax, rdi");
+            println!("\tsetl al");
+            println!("\tmovzb rax, al");
+        }
+        NodeKind::LessThanOrEqual => {
+            println!("\tcmp rax, rdi");
+            println!("\tsetle al");
+            println!("\tmovzb rax, al");
+        }
         _ => return Err(Error::InvalidNode),
     }
 
