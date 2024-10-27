@@ -2,19 +2,51 @@ use error::Error;
 use parser::ast::{Node, NodeKind};
 
 mod error;
-pub fn generate(node: Node) -> Result<(), Error> {
+pub fn generate(node: &Node) -> Result<(), Error> {
     if let NodeKind::Num(n) = node.kind {
         println!("\tpush {n}");
         return Ok(());
     }
 
-    if let Some(lhs) = node.lhs {
-        generate(*lhs)?;
+    match node.kind {
+        NodeKind::Num(n) => {
+            println!("\tpush {n}");
+            return Ok(());
+        }
+        NodeKind::LocalVar(_, _) => {
+            generate_local_val(node)?;
+            println!("\tpop rax");
+            println!("\tmov rax, [rax]");
+            println!("\tpush rax");
+            return Ok(());
+        }
+        NodeKind::Assignment => {
+            if let Some(lhs) = &node.lhs {
+                generate_local_val(lhs)?;
+            } else {
+                return Err(Error::InvalidNode);
+            }
+            if let Some(rhs) = &node.rhs {
+                generate(rhs)?;
+            } else {
+                return Err(Error::InvalidNode);
+            }
+            println!("\tpop rdi");
+            println!("\tpop rax");
+            println!("\tmov [rax], rdi");
+            println!("\tpush rdi");
+            return Ok(());
+        }
+        _ => {}
+    }
+
+    if let Some(lhs) = &node.lhs {
+        generate(lhs)?;
     } else {
         return Err(Error::InvalidNode);
     }
-    if let Some(rhs) = node.rhs {
-        generate(*rhs)?;
+    if let Some(rhs) = &node.rhs {
+        generate(rhs)?;
     } else {
         return Err(Error::InvalidNode);
     }
@@ -56,4 +88,15 @@ pub fn generate(node: Node) -> Result<(), Error> {
     println!("\tpush rax");
 
     Ok(())
+}
+
+fn generate_local_val(node: &Node) -> Result<(), Error> {
+    if let NodeKind::LocalVar(_s, offset) = &node.kind {
+        println!("\tmov rax, rbp");
+        println!("\tsub rax, {offset}");
+        println!("\tpush rax");
+        Ok(())
+    } else {
+        Err(Error::LeftValueMustBeIdentifier)
+    }
 }

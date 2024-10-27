@@ -4,7 +4,7 @@ use token::Token;
 
 use crate::error::Error;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum NodeKind {
     Add,
     Sub,
@@ -16,6 +16,8 @@ pub enum NodeKind {
     GreaterThan,
     LessThanOrEqual,
     GreaterThanOrEqual,
+    Assignment,
+    LocalVar(String, u32),
     Num(u64),
 }
 
@@ -33,6 +35,8 @@ impl TryFrom<Token> for NodeKind {
             Token::LessThanOrEqual => Ok(NodeKind::LessThanOrEqual),
             Token::GreaterThan => Ok(NodeKind::GreaterThan),
             Token::GreaterThanOrEqual => Ok(NodeKind::GreaterThanOrEqual),
+            Token::Assignment => Ok(NodeKind::Assignment),
+            Token::Identifier(s) => Ok(NodeKind::LocalVar(s, 0)), // offset is not determined here
             Token::Num(n) => Ok(NodeKind::Num(n)),
             _ => Err(Error::InvalidToken(value)),
         }
@@ -52,7 +56,9 @@ impl Display for NodeKind {
             NodeKind::LessThanOrEqual => write!(f, "LessThanOrEqual"),
             NodeKind::GreaterThan => write!(f, "GreaterThan"),
             NodeKind::GreaterThanOrEqual => write!(f, "GreaterThanOrEqual"),
+            NodeKind::Assignment => write!(f, "Assignment"),
             NodeKind::Num(n) => write!(f, "Num({n})"),
+            NodeKind::LocalVar(s, offset) => write!(f, "LocalVar({s}, {offset})"),
         }
     }
 }
@@ -77,6 +83,14 @@ impl Node {
         }
     }
 
+    pub fn new_local_var(s: String, offset: u32) -> Self {
+        Self {
+            kind: NodeKind::LocalVar(s, offset),
+            lhs: None,
+            rhs: None,
+        }
+    }
+
     pub fn num_from_token(token: Token) -> Result<Node, Error> {
         if let Token::Num(n) = token {
             Ok(Node {
@@ -92,6 +106,13 @@ impl Node {
     fn num(&self) -> Option<u64> {
         match self.kind {
             NodeKind::Num(n) => Some(n),
+            _ => None,
+        }
+    }
+
+    fn local_var(&self) -> Option<String> {
+        match &self.kind {
+            NodeKind::LocalVar(s, _) => Some(s.clone()),
             _ => None,
         }
     }

@@ -13,3 +13,20 @@ pub const CLOSE_PAREN: char = ')';
 
 pub const LESS_THAN: char = '<';
 pub const GREATER_THAN: char = '>';
+
+pub const SEMICOLON: char = ';';
+
+pub const RESERVED_CHARS: [char; 12] = [
+    WHITE_SPACE,
+    PLUS,
+    MINUS,
+    ASTERISK,
+    SLASH,
+    EQUAL,
+    EXCLAMATION,
+    OPEN_PAREN,
+    CLOSE_PAREN,
+    LESS_THAN,
+    GREATER_THAN,
+    SEMICOLON,
+];

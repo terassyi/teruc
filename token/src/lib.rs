@@ -1,8 +1,10 @@
 use std::fmt::Display;
 
+use reserved::RESERVED_CHARS;
+
 pub mod reserved;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Token {
     Add,                // +
     Sub,                // -
@@ -18,7 +20,9 @@ pub enum Token {
     NotEqual,           // !=
     Assignment,         // = // not used yet
     Not,                // ! // not used yet
+    Semicolon,          // ;
     Num(u64),           // number
+    Identifier(String), // identifier
     Eof,                // EOF
 }
 
@@ -39,8 +43,14 @@ impl Display for Token {
             Self::NotEqual => write!(f, "!="),
             Self::Assignment => write!(f, "="),
             Self::Not => write!(f, "!"),
+            Self::Semicolon => write!(f, ";"),
             Self::Num(n) => write!(f, "num({n})"),
+            Self::Identifier(i) => write!(f, "identifier({i})"),
             Self::Eof => write!(f, "EOF"),
         }
     }
+}
+
+pub fn is_reserved(c: char) -> bool {
+    RESERVED_CHARS.iter().any(|p| c == *p)
 }

@@ -9,22 +9,38 @@ mod cmd;
 fn main() {
     let args = Args::parse();
 
-    pre_process();
-
     let tokenizer = Tokenizer::default();
     let tokens = tokenizer.process(args.input).unwrap();
 
     let mut parser = parser::Parser::new(tokens);
-    let node = parser.parse().unwrap();
+    parser.parse().unwrap();
 
-    generator::generate(node).unwrap();
+    pre_process();
 
-    println!("\tpop rax");
-    println!("\tret")
+    alloc_local_area();
+
+    for node in parser.nodes.iter() {
+        generator::generate(node).unwrap();
+        println!("\tpop rax");
+    }
+
+    post_process();
 }
 
 fn pre_process() {
     println!("{} {}", constants::INTEL_SYNTAX, constants::NOPREFIX);
     println!("{} main", constants::SEC_GLOBAL);
     println!("main:");
+}
+
+fn post_process() {
+    println!("\tmov rsp, rbp");
+    println!("\tpop rbp");
+    println!("\tret")
+}
+
+fn alloc_local_area() {
+    println!("\tpush rbp");
+    println!("\tmov rbp, rsp");
+    println!("\tsub rsp, 208"); // 8 * 26
 }
