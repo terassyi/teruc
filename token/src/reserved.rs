@@ -17,6 +17,8 @@ pub const GREATER_THAN: char = '>';
 pub const SEMICOLON: char = ';';
 
 pub const RETURN: &str = "return";
+pub const IF: &str = "if";
+pub const ELSE: &str = "else";
 
 pub const RESERVED_CHARS: [char; 12] = [
     WHITE_SPACE,
@@ -33,4 +35,4 @@ pub const RESERVED_CHARS: [char; 12] = [
     SEMICOLON,
 ];
 
-pub const RESERVED_STR: [&str; 1] = [RETURN];
+pub const RESERVED_STR: [&str; 3] = [RETURN, IF, ELSE];

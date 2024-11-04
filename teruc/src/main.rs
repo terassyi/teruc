@@ -1,6 +1,7 @@
 use asm::x86::intel::constants;
 use clap::Parser;
 use cmd::Args;
+use generator::Generator;
 use parser::parser;
 use tokenizer::Tokenizer;
 
@@ -19,8 +20,10 @@ fn main() {
 
     alloc_local_area();
 
+    let mut generator = Generator::default();
     for node in parser.nodes.iter() {
-        generator::generate(node).unwrap();
+        eprintln!("node => {:?}", node);
+        generator.generate(node).unwrap();
         println!("\tpop rax");
     }
 

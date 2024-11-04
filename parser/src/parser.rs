@@ -9,7 +9,9 @@ use crate::{
 
 /*
 program    = stmt*
-stmt       = expr ";" | "return" expr ";"
+stmt       = expr ";"
+                | "if" "(" expr ")" stmt ("else" stmt)?
+                | "return" expr ";"
 expr       = assign
 assign     = equality ("=" assign)?
 equality   = relational ("==" relational | "!=" relational)*
@@ -51,14 +53,26 @@ impl Parser {
         Ok(())
     }
 
-    // stmt = expr ";" | "return" expr ";"
+    /* stmt = expr ";"
+                | "if" "(" expr ")" stmt ("else" stmt)?
+                | "return" expr ";"
+    */
     fn stmt(&mut self) -> Result<Node, Error> {
         let node = if let Some(t) = self.tokens.front() {
-            if t.eq(&Token::Return) {
-                self.tokens.pop_front();
-                Node::new(NodeKind::Return, Some(Box::new(self.expr()?)), None)
-            } else {
-                self.expr()?
+            match t {
+                Token::Return => {
+                    self.consume(Token::Return)?;
+                    Node::new(NodeKind::Return, Some(Box::new(self.expr()?)), None)
+                }
+                Token::If => {
+                    self.consume(Token::If)?;
+                    self.consume(Token::OpenParen)?;
+                    let lhs = self.expr()?;
+                    self.consume(Token::CloseParen)?;
+                    let rhs = self.stmt()?;
+                    Node::new(NodeKind::If, Some(Box::new(lhs)), Some(Box::new(rhs)))
+                }
+                _ => self.expr()?,
             }
         } else {
             self.expr()?
@@ -187,7 +201,7 @@ impl Parser {
         while let Some(p) = self.tokens.front() {
             match p {
                 Token::Add => {
-                    self.tokens.pop_front(); // consume
+                    self.consume(Token::Add)?;
                     node = Node::new(
                         NodeKind::Add,
                         Some(Box::new(node)),
@@ -195,7 +209,7 @@ impl Parser {
                     )
                 }
                 Token::Sub => {
-                    self.tokens.pop_front(); // consume
+                    self.consume(Token::Sub)?;
                     node = Node::new(
                         NodeKind::Sub,
                         Some(Box::new(node)),
@@ -215,7 +229,7 @@ impl Parser {
         while let Some(p) = self.tokens.front() {
             match p {
                 Token::Mul => {
-                    self.tokens.pop_front(); // consume
+                    self.consume(Token::Mul)?;
                     node = Node::new(
                         NodeKind::Mul,
                         Some(Box::new(node)),
@@ -223,7 +237,7 @@ impl Parser {
                     );
                 }
                 Token::Div => {
-                    self.tokens.pop_front(); // consume
+                    self.consume(Token::Div)?;
                     node = Node::new(
                         NodeKind::Div,
                         Some(Box::new(node)),
@@ -242,11 +256,11 @@ impl Parser {
         if let Some(p) = self.tokens.front() {
             match p {
                 Token::Add => {
-                    self.tokens.pop_front();
+                    self.consume(Token::Add)?;
                     self.primary()
                 }
                 Token::Sub => {
-                    self.tokens.pop_front();
+                    self.consume(Token::Sub)?;
                     Ok(Node::new(
                         NodeKind::Sub,
                         Some(Box::new(Node::new_num(0))),
@@ -265,11 +279,11 @@ impl Parser {
         if let Some(t) = self.tokens.front() {
             if t.eq(&Token::OpenParen) {
                 // continue to parse expr
-                self.tokens.pop_front(); // consume
+                self.consume(Token::OpenParen)?;
                 let node = self.expr()?;
                 if let Some(t) = self.tokens.front() {
                     if t.eq(&Token::CloseParen) {
-                        self.tokens.pop_front(); // consume
+                        self.consume(Token::CloseParen)?;
                         Ok(node)
                     } else {
                         Err(Error::UnexpectedToken(Token::CloseParen, t.clone()))
@@ -279,7 +293,6 @@ impl Parser {
                 }
             } else {
                 // expect number
-                // let node = Node::num_from_token(t.clone())?;
                 if let Some(t) = self.tokens.pop_front() {
                     match t {
                         Token::Num(n) => Ok(Node::new_num(n)),
@@ -306,6 +319,19 @@ impl Parser {
 
     fn find_local_var(&self, name: &str) -> Option<u32> {
         self.local_vars.get(name).copied()
+    }
+
+    fn consume(&mut self, expect: Token) -> Result<(), Error> {
+        if let Some(t) = self.tokens.front() {
+            if t.eq(&expect) {
+                self.tokens.pop_front();
+                Ok(())
+            } else {
+                Err(Error::UnexpectedToken(expect, t.clone()))
+            }
+        } else {
+            Err(Error::InvalidTermination)
+        }
     }
 }
 
@@ -394,6 +420,13 @@ mod tests {
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2))), Some(Box::new(Node::new_num(1)))),
                 Node::new(NodeKind::Return, Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2)))))), None)
             ],
+        ),
+        case(
+            vec![Token::If, Token::OpenParen, Token::Num(1), Token::CloseParen, Token::Return, Token::Num(1)],
+            vec![
+                Node::new(NodeKind::If, Some(Box::new(Node::new_num(1))), Some(Box::new(Node::new(NodeKind::Return, Some(Box::new(Node::new_num(1))), None))))
+            ]
+
         ),
     )]
     fn test_parser_parse(input: Vec<Token>, expect: Vec<Node>) {

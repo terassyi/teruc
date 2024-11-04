@@ -20,6 +20,8 @@ pub enum NodeKind {
     LocalVar(String, u32),
     Num(u64),
     Return,
+    If,
+    Else,
 }
 
 impl TryFrom<Token> for NodeKind {
@@ -40,6 +42,8 @@ impl TryFrom<Token> for NodeKind {
             Token::Identifier(s) => Ok(NodeKind::LocalVar(s, 0)), // offset is not determined here
             Token::Num(n) => Ok(NodeKind::Num(n)),
             Token::Return => Ok(NodeKind::Return),
+            Token::If => Ok(NodeKind::If),
+            Token::Else => Ok(NodeKind::Else),
             _ => Err(Error::InvalidToken(value)),
         }
     }
@@ -61,7 +65,9 @@ impl Display for NodeKind {
             NodeKind::Assignment => write!(f, "Assignment"),
             NodeKind::Num(n) => write!(f, "Num({n})"),
             NodeKind::LocalVar(s, offset) => write!(f, "LocalVar({s}, {offset})"),
-            NodeKind::Return => write!(f, "Return")
+            NodeKind::Return => write!(f, "Return"),
+            NodeKind::If => write!(f, "If"),
+            NodeKind::Else => write!(f, "Else"),
         }
     }
 }

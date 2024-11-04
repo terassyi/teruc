@@ -24,6 +24,8 @@ pub enum Token {
     Num(u64),           // number
     Identifier(String), // identifier
     Return,             // return
+    If,                 // if
+    Else,               // else
     Eof,                // EOF
 }
 
@@ -48,6 +50,8 @@ impl Display for Token {
             Self::Num(n) => write!(f, "num({n})"),
             Self::Identifier(i) => write!(f, "identifier({i})"),
             Self::Return => write!(f, "return"),
+            Self::If => write!(f, "if"),
+            Self::Else => write!(f, "else"),
             Self::Eof => write!(f, "EOF"),
         }
     }

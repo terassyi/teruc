@@ -151,6 +151,8 @@ impl Tokenizer {
     fn reserved_identifier(ident: &str) -> Option<Token> {
         match ident {
             reserved::RETURN => Some(Token::Return),
+            reserved::IF => Some(Token::If),
+            reserved::ELSE => Some(Token::Else),
             _ => None,
         }
     }
@@ -239,6 +241,7 @@ mod tests {
         case("aa = 1 + (2 * 3 - 4); ", vec![Token::Identifier("aa".to_string()), Token::Assignment, Token::Num(1), Token::Add, Token::OpenParen, Token::Num(2), Token::Mul, Token::Num(3), Token::Sub, Token::Num(4), Token::CloseParen, Token::Semicolon]),
         case("a = 1; b = 2; c = a + b", vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(2), Token::Semicolon, Token::Identifier("c".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string())]),
         case("return 1;", vec![Token::Return, Token::Num(1), Token::Semicolon]),
+        case("if (1) a = 1; else a = 2;", vec![Token::If, Token::OpenParen, Token::Num(1), Token::CloseParen, Token::Identifier("a".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Else, Token::Identifier("a".to_string()), Token::Assignment, Token::Num(2), Token::Semicolon]),
     )]
     fn test_tokenizer_process(input: &str, expect: Vec<Token>) {
         let tokenizer = Tokenizer::default();
