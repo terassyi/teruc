@@ -23,6 +23,7 @@ pub enum Token {
     Semicolon,          // ;
     Num(u64),           // number
     Identifier(String), // identifier
+    Return,             // return
     Eof,                // EOF
 }
 
@@ -46,6 +47,7 @@ impl Display for Token {
             Self::Semicolon => write!(f, ";"),
             Self::Num(n) => write!(f, "num({n})"),
             Self::Identifier(i) => write!(f, "identifier({i})"),
+            Self::Return => write!(f, "return"),
             Self::Eof => write!(f, "EOF"),
         }
     }

@@ -3,13 +3,13 @@ use std::collections::VecDeque;
 use token::Token;
 
 use crate::{
-    ast::{Node, NodeKind},
+    ast::{LocalVars, Node, NodeKind},
     error::Error,
 };
 
 /*
 program    = stmt*
-stmt       = expr ";"
+stmt       = expr ";" | "return" expr ";"
 expr       = assign
 assign     = equality ("=" assign)?
 equality   = relational ("==" relational | "!=" relational)*
@@ -25,6 +25,7 @@ pub struct Parser {
     tokens: VecDeque<Token>,
     pub nodes: Vec<Node>,
     local_val_offset: u32,
+    local_vars: LocalVars,
 }
 
 impl Parser {
@@ -33,6 +34,7 @@ impl Parser {
             tokens: tokens.into(),
             nodes: Vec::new(),
             local_val_offset: 1,
+            local_vars: LocalVars::new(),
         }
     }
 
@@ -49,9 +51,18 @@ impl Parser {
         Ok(())
     }
 
-    // stmt = expr ";"
+    // stmt = expr ";" | "return" expr ";"
     fn stmt(&mut self) -> Result<Node, Error> {
-        let node = self.expr()?;
+        let node = if let Some(t) = self.tokens.front() {
+            if t.eq(&Token::Return) {
+                self.tokens.pop_front();
+                Node::new(NodeKind::Return, Some(Box::new(self.expr()?)), None)
+            } else {
+                self.expr()?
+            }
+        } else {
+            self.expr()?
+        };
 
         if let Some(t) = self.tokens.front() {
             if t.ne(&Token::Semicolon) {
@@ -273,9 +284,14 @@ impl Parser {
                     match t {
                         Token::Num(n) => Ok(Node::new_num(n)),
                         Token::Identifier(s) => {
-                            let offset = self.local_val_offset * 8;
-                            self.local_val_offset += 1;
-                            Ok(Node::new_local_var(s, offset))
+                            if let Some(offset) = self.find_local_var(&s) {
+                                Ok(Node::new_local_var(s, offset))
+                            } else {
+                                let offset = self.local_val_offset * 8;
+                                self.local_val_offset += 1;
+                                self.local_vars.insert(s.clone(), offset);
+                                Ok(Node::new_local_var(s, offset))
+                            }
                         }
                         _ => Err(Error::InvalidToken(t)),
                     }
@@ -286,6 +302,10 @@ impl Parser {
         } else {
             Err(Error::InvalidTermination)
         }
+    }
+
+    fn find_local_var(&self, name: &str) -> Option<u32> {
+        self.local_vars.get(name).copied()
     }
 }
 
@@ -358,7 +378,23 @@ mod tests {
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))),
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2))), Some(Box::new(Node::new_num(1))))
             ],
-        )
+        ),
+        case(
+            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Identifier("c".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string())],
+            vec![
+                Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))),
+                Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2))), Some(Box::new(Node::new_num(1)))),
+                Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("c".to_string(), 8 * 3))), Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2)))))))
+            ],
+        ),
+        case(
+            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Return, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string())],
+            vec![
+                Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))),
+                Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2))), Some(Box::new(Node::new_num(1)))),
+                Node::new(NodeKind::Return, Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2)))))), None)
+            ],
+        ),
     )]
     fn test_parser_parse(input: Vec<Token>, expect: Vec<Node>) {
         let mut parser = Parser::new(input);

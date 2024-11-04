@@ -126,17 +126,33 @@ impl Tokenizer {
         let mut ident = head.to_string();
         while let Some(c) = chars.peek() {
             if is_reserved(*c) {
-                return Ok(Token::Identifier(ident));
+                return match Self::reserved_identifier(&ident) {
+                    Some(t) => Ok(t),
+                    None => Ok(Token::Identifier(ident)),
+                };
             }
             if let Some(p) = chars.next() {
                 ident += &p.to_string();
             } else {
                 // got EOF
-                return Err(Error::FailedToTokenize);
+                return match Self::reserved_identifier(&ident) {
+                    Some(t) => Ok(t),
+                    None => Ok(Token::Identifier(ident)),
+                };
             }
         }
         // got EOF while generating an identifier
-        Err(Error::FailedToTokenize)
+        match Self::reserved_identifier(&ident) {
+            Some(t) => Ok(t),
+            None => Ok(Token::Identifier(ident)),
+        }
+    }
+
+    fn reserved_identifier(ident: &str) -> Option<Token> {
+        match ident {
+            reserved::RETURN => Some(Token::Return),
+            _ => None,
+        }
     }
 }
 
@@ -165,7 +181,6 @@ fn get_num(chars: &mut Peekable<Chars>, head: char) -> Result<u64, Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
 
     use rstest::rstest;
 
@@ -221,7 +236,9 @@ mod tests {
         case("0 > 0", vec![Token::Num(0), Token::GreaterThan, Token::Num(0)]),
         case("0 >= 0", vec![Token::Num(0), Token::GreaterThanOrEqual, Token::Num(0)]),
         case("a = 1", vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(1)]),
-        case("aa = 1 + (2 * 3 - 4); ", vec![Token::Identifier("aa".to_string()), Token::Assignment, Token::Num(1), Token::Add, Token::OpenParen, Token::Num(2), Token::Mul, Token::Num(3), Token::Sub, Token::Num(4), Token::CloseParen, Token::Semicolon])
+        case("aa = 1 + (2 * 3 - 4); ", vec![Token::Identifier("aa".to_string()), Token::Assignment, Token::Num(1), Token::Add, Token::OpenParen, Token::Num(2), Token::Mul, Token::Num(3), Token::Sub, Token::Num(4), Token::CloseParen, Token::Semicolon]),
+        case("a = 1; b = 2; c = a + b", vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(2), Token::Semicolon, Token::Identifier("c".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string())]),
+        case("return 1;", vec![Token::Return, Token::Num(1), Token::Semicolon]),
     )]
     fn test_tokenizer_process(input: &str, expect: Vec<Token>) {
         let tokenizer = Tokenizer::default();

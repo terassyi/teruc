@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use token::Token;
 
@@ -19,6 +19,7 @@ pub enum NodeKind {
     Assignment,
     LocalVar(String, u32),
     Num(u64),
+    Return,
 }
 
 impl TryFrom<Token> for NodeKind {
@@ -38,6 +39,7 @@ impl TryFrom<Token> for NodeKind {
             Token::Assignment => Ok(NodeKind::Assignment),
             Token::Identifier(s) => Ok(NodeKind::LocalVar(s, 0)), // offset is not determined here
             Token::Num(n) => Ok(NodeKind::Num(n)),
+            Token::Return => Ok(NodeKind::Return),
             _ => Err(Error::InvalidToken(value)),
         }
     }
@@ -59,6 +61,7 @@ impl Display for NodeKind {
             NodeKind::Assignment => write!(f, "Assignment"),
             NodeKind::Num(n) => write!(f, "Num({n})"),
             NodeKind::LocalVar(s, offset) => write!(f, "LocalVar({s}, {offset})"),
+            NodeKind::Return => write!(f, "Return")
         }
     }
 }
@@ -139,3 +142,5 @@ impl Display for Node {
         }
     }
 }
+
+pub type LocalVars = HashMap<String, u32>;

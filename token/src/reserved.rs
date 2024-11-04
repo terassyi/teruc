@@ -16,6 +16,8 @@ pub const GREATER_THAN: char = '>';
 
 pub const SEMICOLON: char = ';';
 
+pub const RETURN: &str = "return";
+
 pub const RESERVED_CHARS: [char; 12] = [
     WHITE_SPACE,
     PLUS,
@@ -30,3 +32,5 @@ pub const RESERVED_CHARS: [char; 12] = [
     GREATER_THAN,
     SEMICOLON,
 ];
+
+pub const RESERVED_STR: [&str; 1] = [RETURN];

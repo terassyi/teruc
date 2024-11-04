@@ -3,11 +3,6 @@ use parser::ast::{Node, NodeKind};
 
 mod error;
 pub fn generate(node: &Node) -> Result<(), Error> {
-    if let NodeKind::Num(n) = node.kind {
-        println!("\tpush {n}");
-        return Ok(());
-    }
-
     match node.kind {
         NodeKind::Num(n) => {
             println!("\tpush {n}");
@@ -35,6 +30,18 @@ pub fn generate(node: &Node) -> Result<(), Error> {
             println!("\tpop rax");
             println!("\tmov [rax], rdi");
             println!("\tpush rdi");
+            return Ok(());
+        }
+        NodeKind::Return => {
+            if let Some(lhs) = &node.lhs {
+                generate(lhs)?;
+            } else {
+                return Err(Error::InvalidNode);
+            }
+            println!("\tpop rax");
+            println!("\tmov rsp, rbp");
+            println!("\tpop rbp");
+            println!("\tret");
             return Ok(());
         }
         _ => {}
