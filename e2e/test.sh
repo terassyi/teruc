@@ -36,4 +36,6 @@ assert 3 'a = 1; aa = 2; return a + aa'
 assert 2 'a = 1; b = 2; aa = b - a; return a + aa'
 assert 0 'if (1) return 0'
 assert 10 'a = 1; if (a == 1) return 10'
+assert 1 'a = 1; if (a == 0) return 0; else return 1'
+assert 1 'a = 1; if (a == 0) return 0; else if (a == 1) return 1; else return 2'
 echo OK
