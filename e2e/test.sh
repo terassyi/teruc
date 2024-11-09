@@ -38,4 +38,5 @@ assert 0 'if (1) return 0'
 assert 10 'a = 1; if (a == 1) return 10'
 assert 1 'a = 1; if (a == 0) return 0; else return 1'
 assert 1 'a = 1; if (a == 0) return 0; else if (a == 1) return 1; else return 2'
+assert 1 'a = 0; while (a == 10) a = a + 1' # now it cannot continue some statements after "while".
 echo OK

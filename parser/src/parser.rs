@@ -11,6 +11,7 @@ use crate::{
 program    = stmt*
 stmt       = expr ";"
                 | "if" "(" expr ")" stmt ("else" stmt)?
+                | "while" "(" expr ")" stmt
                 | "return" expr ";"
 expr       = assign
 assign     = equality ("=" assign)?
@@ -55,6 +56,7 @@ impl Parser {
 
     /* stmt = expr ";"
                 | "if" "(" expr ")" stmt ("else" stmt)?
+                | "while" "(" expr ")" stmt
                 | "return" expr ";"
     */
     fn stmt(&mut self) -> Result<Node, Error> {
@@ -83,6 +85,15 @@ impl Parser {
                         }
                     }
                     Node::new(NodeKind::If, Some(Box::new(lhs)), Some(Box::new(rhs)))
+                }
+                Token::While => {
+                    self.consume(Token::While)?;
+                    self.consume(Token::OpenParen)?;
+                    let lhs = self.expr()?;
+                    self.consume(Token::CloseParen)?;
+                    let rhs = self.stmt()?;
+
+                    Node::new(NodeKind::While, Some(Box::new(lhs)), Some(Box::new(rhs)))
                 }
                 _ => self.expr()?,
             }
@@ -454,30 +465,24 @@ mod tests {
                     )
                 ],
         ),
-        // case(
-        //     vec![
-        //         Token::Identifier("a".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon,
-        //         Token::If, Token::OpenParen, Token::Identifier("a".to_string()), Token::Equal, Token::Num(0), Token::CloseParen,
-        //         Token::Return, Token::Num(0),
-        //         Token::Else, Token::If, Token::OpenParen, Token::Identifier("a".to_string()), Token::Equal, Token::Num(2), Token::CloseParen,
-        //         Token::Return, Token::Num(2),
-        //         Token::Else,
-        //         Token::Return, Token::Num(1),
-        //         ],
-        //     vec![
-        //         Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(1)))),
-        //         Node::new(
-        //             NodeKind::If,
-        //             Some(Box::new(Node::new(NodeKind::Equal, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))))),
-        //             Some(Box::new(Node::new(NodeKind::Else,
-        //                 Some(Box::new(Node::new(NodeKind::If,
-        //                     Some(Box::new(Node::new(NodeKind::Equal, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(2)))))),
-        //                     Some(Box::new(Node::new(NodeKind::Else,
-        //                         Some(),
-        //                         Some(),
-        //                     )))
-        //                 ))), None))))]
-        // ),
+        case(
+            vec![
+                Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon,
+                Token::While, Token::OpenParen, Token::Identifier("a".to_string()), Token::Equal, Token::Num(10), Token::CloseParen,
+                Token::Identifier("a".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Num(1), Token::Semicolon,
+                // Token::Return, Token::Identifier("a".to_string(),)
+            ],
+            vec![
+                Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))),
+                Node::new(NodeKind::While,
+                    Some(Box::new(Node::new(NodeKind::Equal, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(10)))))),
+                    Some(Box::new(Node::new(NodeKind::Assignment,
+                        Some(Box::new(Node::new_local_var("a".to_string(), 8))),
+                        Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(1))))))))),
+                ),
+                // Node::new(NodeKind::Return, Some(Box::new(Node::new_local_var("a".to_string(), 8))), None),
+            ],
+        )
     )]
     fn test_parser_parse(input: Vec<Token>, expect: Vec<Node>) {
         let mut parser = Parser::new(input);

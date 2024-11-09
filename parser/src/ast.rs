@@ -22,6 +22,7 @@ pub enum NodeKind {
     Return,
     If,
     Else,
+    While,
 }
 
 impl TryFrom<Token> for NodeKind {
@@ -44,6 +45,7 @@ impl TryFrom<Token> for NodeKind {
             Token::Return => Ok(NodeKind::Return),
             Token::If => Ok(NodeKind::If),
             Token::Else => Ok(NodeKind::Else),
+            Token::While => Ok(NodeKind::While),
             _ => Err(Error::InvalidToken(value)),
         }
     }
@@ -68,6 +70,7 @@ impl Display for NodeKind {
             NodeKind::Return => write!(f, "Return"),
             NodeKind::If => write!(f, "If"),
             NodeKind::Else => write!(f, "Else"),
+            NodeKind::While => write!(f, "While"),
         }
     }
 }

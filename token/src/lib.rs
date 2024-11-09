@@ -26,6 +26,7 @@ pub enum Token {
     Return,             // return
     If,                 // if
     Else,               // else
+    While,              // while
     Eof,                // EOF
 }
 
@@ -52,6 +53,7 @@ impl Display for Token {
             Self::Return => write!(f, "return"),
             Self::If => write!(f, "if"),
             Self::Else => write!(f, "else"),
+            Self::While => write!(f, "while"),
             Self::Eof => write!(f, "EOF"),
         }
     }

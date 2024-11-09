@@ -19,6 +19,7 @@ pub const SEMICOLON: char = ';';
 pub const RETURN: &str = "return";
 pub const IF: &str = "if";
 pub const ELSE: &str = "else";
+pub const WHILE: &str = "while";
 
 pub const RESERVED_CHARS: [char; 12] = [
     WHITE_SPACE,
@@ -35,4 +36,4 @@ pub const RESERVED_CHARS: [char; 12] = [
     SEMICOLON,
 ];
 
-pub const RESERVED_STR: [&str; 3] = [RETURN, IF, ELSE];
+pub const RESERVED_STR: [&str; 4] = [RETURN, IF, ELSE, WHILE];

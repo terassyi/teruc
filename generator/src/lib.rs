@@ -7,6 +7,7 @@ mod error;
 pub struct Generator {
     end_labels: u32,
     else_labels: u32,
+    begin_labels: u32,
 }
 
 impl Generator {
@@ -87,8 +88,25 @@ impl Generator {
                 }
                 return Ok(());
             }
-            NodeKind::Else => {
-                // else
+            NodeKind::While => {
+                println!(".Lbegin{}:", self.begin_labels);
+                if let Some(lhs) = &node.lhs {
+                    self.generate(lhs)?;
+                } else {
+                    return Err(Error::InvalidNode);
+                }
+                println!("\tpop rax");
+                println!("\tcmp rax, 0");
+                println!("\tje .Lend{}", self.end_labels);
+                if let Some(rhs) = &node.rhs {
+                    self.generate(rhs)?;
+                } else {
+                    return Err(Error::InvalidNode);
+                }
+                println!("\tjmp .Lbegin{}", self.begin_labels);
+                self.begin_labels += 1;
+                println!(".Lend{}", self.end_labels);
+                self.end_labels += 1;
             }
             _ => {}
         }
