@@ -23,6 +23,8 @@ pub enum NodeKind {
     If,
     Else,
     While,
+    For,
+    Block(Vec<Node>),
 }
 
 impl TryFrom<Token> for NodeKind {
@@ -46,6 +48,7 @@ impl TryFrom<Token> for NodeKind {
             Token::If => Ok(NodeKind::If),
             Token::Else => Ok(NodeKind::Else),
             Token::While => Ok(NodeKind::While),
+            Token::For => Ok(NodeKind::For),
             _ => Err(Error::InvalidToken(value)),
         }
     }
@@ -71,6 +74,8 @@ impl Display for NodeKind {
             NodeKind::If => write!(f, "If"),
             NodeKind::Else => write!(f, "Else"),
             NodeKind::While => write!(f, "While"),
+            NodeKind::For => write!(f, "For"),
+            NodeKind::Block(_) => write!(f, "Block"),
         }
     }
 }

@@ -10,8 +10,10 @@ use crate::{
 /*
 program    = stmt*
 stmt       = expr ";"
+                | "{" stmt* "}"
                 | "if" "(" expr ")" stmt ("else" stmt)?
                 | "while" "(" expr ")" stmt
+                | "for" "(" expr? ";" expr? ";" expr? ")" stmt
                 | "return" expr ";"
 expr       = assign
 assign     = equality ("=" assign)?
@@ -55,8 +57,10 @@ impl Parser {
     }
 
     /* stmt = expr ";"
+                | "{" stmt* "}"
                 | "if" "(" expr ")" stmt ("else" stmt)?
                 | "while" "(" expr ")" stmt
+                | "for" "(" expr? ";" expr? ";" expr? ")" stmt
                 | "return" expr ";"
     */
     fn stmt(&mut self) -> Result<Node, Error> {
@@ -64,7 +68,9 @@ impl Parser {
             match t {
                 Token::Return => {
                     self.consume(Token::Return)?;
-                    Node::new(NodeKind::Return, Some(Box::new(self.expr()?)), None)
+                    let node = Node::new(NodeKind::Return, Some(Box::new(self.expr()?)), None);
+                    self.consume(Token::Semicolon)?;
+                    node
                 }
                 Token::If => {
                     self.consume(Token::If)?;
@@ -95,18 +101,89 @@ impl Parser {
 
                     Node::new(NodeKind::While, Some(Box::new(lhs)), Some(Box::new(rhs)))
                 }
-                _ => self.expr()?,
+                Token::For => {
+                    // for (A; B; C) D
+                    self.consume(Token::For)?;
+                    self.consume(Token::OpenParen)?;
+                    // A
+                    let lhs = match self.tokens.front() {
+                        Some(Token::Semicolon) => None,
+                        Some(_) => Some(self.expr()?),
+                        None => return Err(Error::InvalidTermination),
+                    }
+                    .map(Box::new);
+                    self.consume(Token::Semicolon)?;
+
+                    // B
+                    let if_lhs = match self.tokens.front() {
+                        Some(Token::Semicolon) => None,
+                        Some(_) => Some(self.expr()?),
+                        None => return Err(Error::InvalidTermination),
+                    }
+                    .map(Box::new);
+                    self.consume(Token::Semicolon)?;
+
+                    // C
+                    let expr = match self.tokens.front() {
+                        Some(Token::Semicolon) => None,
+                        Some(_) => Some(self.expr()?),
+                        None => return Err(Error::InvalidTermination),
+                    };
+                    self.consume(Token::CloseParen)?;
+
+                    // D
+                    let stmt = self.stmt()?;
+                    let mut block_nodes = vec![stmt];
+                    if let Some(node) = expr {
+                        block_nodes.push(node);
+                    }
+
+                    let rhs = Node::new(
+                        NodeKind::If,
+                        if_lhs,
+                        Some(Box::new(Node::new(
+                            NodeKind::Block(block_nodes),
+                            None,
+                            None,
+                        ))),
+                    );
+                    Node::new(NodeKind::For, lhs, Some(Box::new(rhs)))
+                }
+                Token::OpenBrace => {
+                    // block
+                    self.consume(Token::OpenBrace)?;
+                    let mut nodes = Vec::new();
+                    while let Some(t) = self.tokens.front() {
+                        if t.eq(&Token::CloseBrace) {
+                            // end of block
+                            self.consume(Token::CloseBrace)?;
+                            break;
+                        } else {
+                            let node = self.stmt()?;
+                            nodes.push(node);
+                        }
+                    }
+                    Node::new(NodeKind::Block(nodes), None, None)
+                }
+                _ => {
+                    let node = self.expr()?;
+                    self.consume(Token::Semicolon)?;
+                    node
+                }
             }
         } else {
-            self.expr()?
+            // let node = self.expr()?;
+            // self.consume(Token::Semicolon)?;
+            // node
+            return Err(Error::InvalidTermination);
         };
 
-        if let Some(t) = self.tokens.front() {
-            if t.ne(&Token::Semicolon) {
-                return Err(Error::UnexpectedToken(Token::Semicolon, t.clone()));
-            }
-        }
-        let _ = self.tokens.pop_front();
+        // if let Some(t) = self.tokens.front() {
+        //     if t.ne(&Token::Semicolon) {
+        //         return Err(Error::UnexpectedToken(Token::Semicolon, t.clone()));
+        //     }
+        // }
+        // let _ = self.tokens.pop_front();
         Ok(node)
     }
 
@@ -371,39 +448,39 @@ mod tests {
         input,
         expect,
         case(
-            vec![Token::Num(0)],
+            vec![Token::Num(0), Token::Semicolon],
             vec![Node::new(NodeKind::Num(0), None, None)]
         ),
         case(
-            vec![Token::Num(0), Token::Add, Token::Num(1)],
+            vec![Token::Num(0), Token::Add, Token::Num(1), Token::Semicolon],
             vec![Node::new(NodeKind::Add, Some(Box::new(Node::new_num(0))), Some(Box::new(Node::new_num(1))))]
         ),
         case(
-            vec![Token::Num(0), Token::Add, Token::OpenParen, Token::Num(2), Token::Add, Token::Num(1), Token::CloseParen],
+            vec![Token::Num(0), Token::Add, Token::OpenParen, Token::Num(2), Token::Add, Token::Num(1), Token::CloseParen, Token::Semicolon],
             vec![Node::new(NodeKind::Add, Some(Box::new(Node::new_num(0))), Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new_num(1)))))))]
         ),
         case(
-            vec![Token::Num(0), Token::Add, Token::OpenParen, Token::Num(2), Token::Add, Token::Num(1), Token::CloseParen, Token::Mul, Token::Num(1)],
+            vec![Token::Num(0), Token::Add, Token::OpenParen, Token::Num(2), Token::Add, Token::Num(1), Token::CloseParen, Token::Mul, Token::Num(1), Token::Semicolon],
             vec![Node::new(NodeKind::Add, Some(Box::new(Node::new_num(0))), Some(Box::new(Node::new(NodeKind::Mul, Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new_num(1)))))), Some(Box::new(Node::new_num(1)))))))]
         ),
         case(
-            vec![Token::Sub, Token::Num(2)],
+            vec![Token::Sub, Token::Num(2), Token::Semicolon],
             vec![Node::new(NodeKind::Sub, Some(Box::new(Node::new_num(0))), Some(Box::new(Node::new_num(2))))]
         ),
         case(
-            vec![Token::Num(2), Token::Equal, Token::Num(2)],
+            vec![Token::Num(2), Token::Equal, Token::Num(2), Token::Semicolon],
             vec![Node::new(NodeKind::Equal, Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new_num(2))))]
         ),
         case(
-            vec![Token::Num(2), Token::LessThan, Token::Num(2)],
+            vec![Token::Num(2), Token::LessThan, Token::Num(2), Token::Semicolon],
             vec![Node::new(NodeKind::LessThan, Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new_num(2))))]
         ),
         case(
-            vec![Token::Num(2), Token::Equal, Token::Num(2), Token::LessThanOrEqual, Token::Num(1)],
+            vec![Token::Num(2), Token::Equal, Token::Num(2), Token::LessThanOrEqual, Token::Num(1), Token::Semicolon],
             vec![Node::new(NodeKind::Equal,Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new(NodeKind::LessThanOrEqual, Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new_num(1)))))))]
         ),
         case(
-            vec![Token::Num(2), Token::Equal, Token::Num(2), Token::GreaterThan, Token::Num(1)],
+            vec![Token::Num(2), Token::Equal, Token::Num(2), Token::GreaterThan, Token::Num(1), Token::Semicolon],
             vec![Node::new(NodeKind::Equal,Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new(NodeKind::LessThan, Some(Box::new(Node::new_num(1))), Some(Box::new(Node::new_num(2)))))))]
         ),
         case(
@@ -411,25 +488,25 @@ mod tests {
             vec![Node::new(NodeKind::Equal,Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new(NodeKind::LessThan, Some(Box::new(Node::new_num(1))), Some(Box::new(Node::new_num(2)))))))]
         ),
         case(
-            vec![Token::Num(2), Token::Equal, Token::Num(2), Token::GreaterThan, Token::Num(1), Token::Semicolon, Token::Num(2), Token::Equal, Token::Num(2), Token::GreaterThan, Token::Num(1)],
+            vec![Token::Num(2), Token::Equal, Token::Num(2), Token::GreaterThan, Token::Num(1), Token::Semicolon, Token::Num(2), Token::Equal, Token::Num(2), Token::GreaterThan, Token::Num(1), Token::Semicolon],
             vec![
                 Node::new(NodeKind::Equal,Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new(NodeKind::LessThan, Some(Box::new(Node::new_num(1))), Some(Box::new(Node::new_num(2))))))),
                 Node::new(NodeKind::Equal,Some(Box::new(Node::new_num(2))), Some(Box::new(Node::new(NodeKind::LessThan, Some(Box::new(Node::new_num(1))), Some(Box::new(Node::new_num(2))))))),
             ]
         ),
         case(
-            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0)],
+            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon],
             vec![Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0))))],
         ),
         case(
-            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(1)],
+            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon],
             vec![
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))),
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2))), Some(Box::new(Node::new_num(1))))
             ],
         ),
         case(
-            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Identifier("c".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string())],
+            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Identifier("c".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string()), Token::Semicolon],
             vec![
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))),
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2))), Some(Box::new(Node::new_num(1)))),
@@ -437,7 +514,7 @@ mod tests {
             ],
         ),
         case(
-            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Return, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string())],
+            vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Return, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string()), Token::Semicolon],
             vec![
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))),
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2))), Some(Box::new(Node::new_num(1)))),
@@ -445,7 +522,7 @@ mod tests {
             ],
         ),
         case(
-            vec![Token::If, Token::OpenParen, Token::Num(1), Token::CloseParen, Token::Return, Token::Num(1)],
+            vec![Token::If, Token::OpenParen, Token::Num(1), Token::CloseParen, Token::Return, Token::Num(1), Token::Semicolon],
             vec![Node::new(NodeKind::If, Some(Box::new(Node::new_num(1))), Some(Box::new(Node::new(NodeKind::Return, Some(Box::new(Node::new_num(1))), None))))]
         ),
         case(
@@ -454,7 +531,7 @@ mod tests {
                 Token::If, Token::OpenParen, Token::Identifier("a".to_string()), Token::Equal, Token::Num(0), Token::CloseParen,
                 Token::Return, Token::Num(0), Token::Semicolon,
                 Token::Else,
-                Token::Return, Token::Num(1),
+                Token::Return, Token::Num(1), Token::Semicolon,
                 ],
             vec![
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(1)))),
@@ -470,7 +547,7 @@ mod tests {
                 Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon,
                 Token::While, Token::OpenParen, Token::Identifier("a".to_string()), Token::Equal, Token::Num(10), Token::CloseParen,
                 Token::Identifier("a".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Num(1), Token::Semicolon,
-                // Token::Return, Token::Identifier("a".to_string(),)
+                Token::Return, Token::Identifier("a".to_string()), Token::Semicolon,
             ],
             vec![
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))),
@@ -480,9 +557,27 @@ mod tests {
                         Some(Box::new(Node::new_local_var("a".to_string(), 8))),
                         Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(1))))))))),
                 ),
-                // Node::new(NodeKind::Return, Some(Box::new(Node::new_local_var("a".to_string(), 8))), None),
+                Node::new(NodeKind::Return, Some(Box::new(Node::new_local_var("a".to_string(), 8))), None),
             ],
-        )
+        ),
+        case(
+            vec![Token::OpenBrace, Token::CloseBrace],
+            vec![Node::new(NodeKind::Block(vec![]), None, None)],
+        ),
+        case(
+            vec![
+                Token::OpenBrace,
+                Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon,
+                Token::Identifier("b".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon,
+                Token::Return, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string()), Token::Semicolon,
+                Token::CloseBrace
+            ],
+            vec![Node::new(NodeKind::Block(vec![
+                Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_num(0)))),
+                Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2))), Some(Box::new(Node::new_num(1)))),
+                Node::new(NodeKind::Return, Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2)))))), None),
+            ]), None, None)],
+        ),
     )]
     fn test_parser_parse(input: Vec<Token>, expect: Vec<Node>) {
         let mut parser = Parser::new(input);

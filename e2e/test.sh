@@ -21,22 +21,24 @@ assert() {
   fi
 }
 
-assert 0 0
-assert 42 42
+assert 0 '0;'
+assert 42 '42;'
 
-assert 41 " 12 + 34 - 5 "
-assert 47 '5+6*7'
-assert 15 '5*(9-6)'
-assert 4 '(3+5)/2'
-assert 10 '(-10+20)'
-assert 0 '10 - (-10+20)'
-assert 1 '1 == 1'
-assert 1 '1 >= 10 - (-10+20)'
-assert 3 'a = 1; aa = 2; return a + aa'
-assert 2 'a = 1; b = 2; aa = b - a; return a + aa'
-assert 0 'if (1) return 0'
-assert 10 'a = 1; if (a == 1) return 10'
-assert 1 'a = 1; if (a == 0) return 0; else return 1'
-assert 1 'a = 1; if (a == 0) return 0; else if (a == 1) return 1; else return 2'
-assert 1 'a = 0; while (a == 10) a = a + 1' # now it cannot continue some statements after "while".
+assert 41 " 12 + 34 - 5 ;"
+assert 47 '5+6*7;'
+assert 15 '5*(9-6);'
+assert 4 '(3+5)/2;'
+assert 10 '(-10+20);'
+assert 0 '10 - (-10+20);'
+assert 1 '1 == 1;'
+assert 1 '1 >= 10 - (-10+20);'
+assert 2 'a = 1; a = a + 1; return a;'
+assert 3 'a = 1; aa = 2; return a + aa;'
+assert 2 'a = 1; b = 2; aa = b - a; return a + aa;'
+assert 0 'if (1) return 0;'
+assert 10 'a = 1; if (a == 1) return 10;'
+assert 1 'a = 1; if (a == 0) return 0; else return 1;'
+assert 1 'a = 1; if (a == 0) return 0; else if (a == 1) return 1; else return 2;'
+assert 10 'a = 0; while (a != 10) a = a + 1; return a;'
+assert 10 'b = 0; for(a = 0; a < 10; a = a + 1) b = b + 1; return b;'
 echo OK

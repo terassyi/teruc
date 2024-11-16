@@ -25,6 +25,8 @@ impl Tokenizer {
                 reserved::SLASH => tokens.push(Token::Div),
                 reserved::OPEN_PAREN => tokens.push(Token::OpenParen),
                 reserved::CLOSE_PAREN => tokens.push(Token::CloseParen),
+                reserved::OPEN_BRACE => tokens.push(Token::OpenBrace),
+                reserved::CLOSE_BRACE => tokens.push(Token::CloseBrace),
                 reserved::EQUAL => {
                     let t = self.process_equal(&mut chars)?;
                     tokens.push(t);
@@ -154,6 +156,7 @@ impl Tokenizer {
             reserved::IF => Some(Token::If),
             reserved::ELSE => Some(Token::Else),
             reserved::WHILE => Some(Token::While),
+            reserved::FOR => Some(Token::For),
             _ => None,
         }
     }
@@ -243,7 +246,19 @@ mod tests {
         case("a = 1; b = 2; c = a + b", vec![Token::Identifier("a".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Identifier("b".to_string()), Token::Assignment, Token::Num(2), Token::Semicolon, Token::Identifier("c".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Identifier("b".to_string())]),
         case("return 1;", vec![Token::Return, Token::Num(1), Token::Semicolon]),
         case("if (1) a = 1; else a = 2;", vec![Token::If, Token::OpenParen, Token::Num(1), Token::CloseParen, Token::Identifier("a".to_string()), Token::Assignment, Token::Num(1), Token::Semicolon, Token::Else, Token::Identifier("a".to_string()), Token::Assignment, Token::Num(2), Token::Semicolon]),
-        case("while (a == 10) a = a + 1", vec![Token::While, Token::OpenParen, Token::Identifier("a".to_string()), Token::Equal, Token::Num(10), Token::CloseParen, Token::Identifier("a".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Num(1)])
+        case("while (a == 10) a = a + 1", vec![Token::While, Token::OpenParen, Token::Identifier("a".to_string()), Token::Equal, Token::Num(10), Token::CloseParen, Token::Identifier("a".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Num(1)]),
+        case("for (a = 0; a < 10; a = a + 1) b = b + 1",
+            vec![
+                Token::For, Token::OpenParen,
+                Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon,
+                Token::Identifier("a".to_string()), Token::LessThan, Token::Num(10), Token::Semicolon,
+                Token::Identifier("a".to_string()), Token::Assignment, Token::Identifier("a".to_string()), Token::Add, Token::Num(1),
+                Token::CloseParen,
+                Token::Identifier("b".to_string()), Token::Assignment, Token::Identifier("b".to_string()), Token::Add, Token::Num(1),
+                ]
+        ),
+        case("{}", vec![Token::OpenBrace, Token::CloseBrace]),
+        case("{a = 0;}", vec![Token::OpenBrace, Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::CloseBrace]),
     )]
     fn test_tokenizer_process(input: &str, expect: Vec<Token>) {
         let tokenizer = Tokenizer::default();

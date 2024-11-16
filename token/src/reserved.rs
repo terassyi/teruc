@@ -16,12 +16,16 @@ pub const GREATER_THAN: char = '>';
 
 pub const SEMICOLON: char = ';';
 
+pub const OPEN_BRACE: char = '{';
+pub const CLOSE_BRACE: char = '}';
+
 pub const RETURN: &str = "return";
 pub const IF: &str = "if";
 pub const ELSE: &str = "else";
 pub const WHILE: &str = "while";
+pub const FOR: &str = "for";
 
-pub const RESERVED_CHARS: [char; 12] = [
+pub const RESERVED_CHARS: [char; 14] = [
     WHITE_SPACE,
     PLUS,
     MINUS,
@@ -34,6 +38,8 @@ pub const RESERVED_CHARS: [char; 12] = [
     LESS_THAN,
     GREATER_THAN,
     SEMICOLON,
+    OPEN_BRACE,
+    CLOSE_BRACE,
 ];
 
-pub const RESERVED_STR: [&str; 4] = [RETURN, IF, ELSE, WHILE];
+pub const RESERVED_STR: [&str; 5] = [RETURN, IF, ELSE, WHILE, FOR];

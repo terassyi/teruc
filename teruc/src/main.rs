@@ -22,7 +22,6 @@ fn main() {
 
     let mut generator = Generator::default();
     for node in parser.nodes.iter() {
-        eprintln!("node => {:?}", node);
         generator.generate(node).unwrap();
         println!("\tpop rax");
     }

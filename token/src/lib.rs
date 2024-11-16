@@ -12,6 +12,8 @@ pub enum Token {
     Div,                // /
     OpenParen,          // (
     CloseParen,         // )
+    OpenBrace,          // {
+    CloseBrace,         // }
     LessThan,           // <
     GreaterThan,        // >
     LessThanOrEqual,    // <=
@@ -27,6 +29,7 @@ pub enum Token {
     If,                 // if
     Else,               // else
     While,              // while
+    For,                // for
     Eof,                // EOF
 }
 
@@ -39,6 +42,8 @@ impl Display for Token {
             Self::Div => write!(f, "/"),
             Self::OpenParen => write!(f, "("),
             Self::CloseParen => write!(f, ")"),
+            Self::OpenBrace => write!(f, "{{"),
+            Self::CloseBrace => write!(f, "}}"),
             Self::LessThan => write!(f, "<"),
             Self::GreaterThan => write!(f, ">"),
             Self::LessThanOrEqual => write!(f, "<="),
@@ -54,6 +59,7 @@ impl Display for Token {
             Self::If => write!(f, "if"),
             Self::Else => write!(f, "else"),
             Self::While => write!(f, "while"),
+            Self::For => write!(f, "for"),
             Self::Eof => write!(f, "EOF"),
         }
     }

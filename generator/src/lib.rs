@@ -12,7 +12,8 @@ pub struct Generator {
 
 impl Generator {
     pub fn generate(&mut self, node: &Node) -> Result<(), Error> {
-        match node.kind {
+        eprintln!("generating node => {:?}\n", node);
+        match &node.kind {
             NodeKind::Num(n) => {
                 println!("\tpush {n}");
                 return Ok(());
@@ -105,8 +106,45 @@ impl Generator {
                 }
                 println!("\tjmp .Lbegin{}", self.begin_labels);
                 self.begin_labels += 1;
+                println!(".Lend{}:", self.end_labels);
+                self.end_labels += 1;
+                return Ok(());
+            }
+            NodeKind::For => {
+                if let Some(lhs) = &node.lhs {
+                    self.generate(lhs)?;
+                } else {
+                    return Err(Error::InvalidNode);
+                }
+                println!(".Lbegin{}", self.begin_labels);
+                if let Some(rhs) = &node.rhs {
+                    if rhs.kind.ne(&NodeKind::If) {
+                        return Err(Error::InvalidNode);
+                    }
+                    if let Some(lhs) = &rhs.lhs {
+                        self.generate(lhs)?;
+                    } else {
+                        return Err(Error::InvalidNode);
+                    }
+                    println!("\tpop rax");
+                    println!("\tcmp rax, 0");
+                    println!("\tje .Lend{}", self.end_labels);
+                    if let Some(rhs) = &rhs.rhs {
+                        self.generate(rhs)?;
+                    }
+                    println!("\tjmp .Lbegin{}", self.begin_labels);
+                    self.begin_labels += 1;
+                }
                 println!(".Lend{}", self.end_labels);
                 self.end_labels += 1;
+                return Ok(());
+            }
+            NodeKind::Block(nodes) => {
+                for node in nodes.iter() {
+                    self.generate(node)?;
+                    println!("\tpop rax");
+                }
+                return Ok(());
             }
             _ => {}
         }
@@ -162,6 +200,7 @@ impl Generator {
     }
 
     fn generate_local_val(&self, node: &Node) -> Result<(), Error> {
+        eprintln!("generate local ver => {:?}\n", node);
         if let NodeKind::LocalVar(_s, offset) = &node.kind {
             println!("\tmov rax, rbp");
             println!("\tsub rax, {offset}");
