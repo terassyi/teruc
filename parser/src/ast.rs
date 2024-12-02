@@ -25,7 +25,7 @@ pub enum NodeKind {
     While,
     For,
     Block(Vec<Node>),
-    Func(String),
+    Func(String, Vec<Node>), // name, args(now args only accept number)
 }
 
 impl TryFrom<Token> for NodeKind {
@@ -77,7 +77,7 @@ impl Display for NodeKind {
             NodeKind::While => write!(f, "While"),
             NodeKind::For => write!(f, "For"),
             NodeKind::Block(_) => write!(f, "Block"),
-            NodeKind::Func(s) => write!(f, "Func({s})"),
+            NodeKind::Func(s, _) => write!(f, "Func({s})"),
         }
     }
 }
@@ -122,7 +122,7 @@ impl Node {
         }
     }
 
-    fn num(&self) -> Option<u64> {
+    pub fn num(&self) -> Option<u64> {
         match self.kind {
             NodeKind::Num(n) => Some(n),
             _ => None,

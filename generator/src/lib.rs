@@ -3,6 +3,8 @@ use parser::ast::{Node, NodeKind};
 
 mod error;
 
+const REGISTERS: [&str; 6] = ["rdi", "rsi", "rdx", "rcx", "r8", "r9"];
+
 #[derive(Debug, Default)]
 pub struct Generator {
     end_labels: u32,
@@ -146,7 +148,12 @@ impl Generator {
                 }
                 return Ok(());
             }
-            NodeKind::Func(f) => {
+            NodeKind::Func(f, args) => {
+                for (i, arg) in args.iter().rev().enumerate() {
+                    if let Some(n) = arg.num() {
+                        println!("\tmov {}, {n}", REGISTERS[args.len() - 1 - i])
+                    }
+                }
                 println!("\tcall {}", f);
                 return Ok(());
             }

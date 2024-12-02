@@ -23,7 +23,7 @@ add        = mul ("+" mul | "-" mul)*
 mul        = unary ("*" unary | "/" unary)*
 unary      = ("+" | "-")? primary
 primary    = num
-                | ident ("(" ")")?
+                | ident ("(" num* ")")?
                 | "(" expr ")"
  */
 
@@ -405,8 +405,27 @@ impl Parser {
                         if let Some(tt) = self.tokens.front() {
                             if tt.eq(&Token::OpenParen) {
                                 self.consume(Token::OpenParen)?;
-                                self.consume(Token::CloseParen)?;
-                                return Ok(Node::new(NodeKind::Func(s), None, None)); // TODO: implement lhs and rhs
+                                // args
+                                let mut args = vec![];
+                                while let Some(ttt) = self.tokens.pop_front() {
+                                    if ttt.eq(&Token::CloseParen) {
+                                        break;
+                                    }
+                                    match ttt {
+                                        Token::CloseParen => break,
+                                        Token::Num(n) => {
+                                            args.push(Node::new_num(n));
+                                        }
+                                        _ => {
+                                            return Err(Error::UnexpectedToken(Token::Num(0), ttt))
+                                        }
+                                    }
+                                }
+                                if args.len() > 6 {
+                                    return Err(Error::TooManyArguments(s));
+                                }
+                                return Ok(Node::new(NodeKind::Func(s, args), None, None));
+                                // TODO: implement lhs and rhs
                             }
                         }
                         // ident
@@ -592,7 +611,11 @@ mod tests {
         ),
         case(
             vec![Token::Identifier("foo".to_string()), Token::OpenParen, Token::CloseParen, Token::Semicolon],
-            vec![Node::new(NodeKind::Func("foo".to_string()), None, None)],
+            vec![Node::new(NodeKind::Func("foo".to_string(), vec![]), None, None)],
+        ),
+        case(
+            vec![Token::Identifier("foo".to_string()), Token::OpenParen, Token::Num(1), Token::Num(2), Token::CloseParen, Token::Semicolon],
+            vec![Node::new(NodeKind::Func("foo".to_string(), vec![Node::new_num(1), Node::new_num(2)]), None, None)],
         ),
     )]
     fn test_parser_parse(input: Vec<Token>, expect: Vec<Node>) {

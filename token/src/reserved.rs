@@ -19,6 +19,8 @@ pub const SEMICOLON: char = ';';
 pub const OPEN_BRACE: char = '{';
 pub const CLOSE_BRACE: char = '}';
 
+pub const COMMA: char = ',';
+
 pub const RETURN: &str = "return";
 pub const IF: &str = "if";
 pub const ELSE: &str = "else";

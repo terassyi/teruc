@@ -23,6 +23,7 @@ pub enum Token {
     Assignment,         // = // not used yet
     Not,                // ! // not used yet
     Semicolon,          // ;
+    Comma,              // ,
     Num(u64),           // number
     Identifier(String), // identifier
     Return,             // return
@@ -53,6 +54,7 @@ impl Display for Token {
             Self::Assignment => write!(f, "="),
             Self::Not => write!(f, "!"),
             Self::Semicolon => write!(f, ";"),
+            Self::Comma => write!(f, ","),
             Self::Num(n) => write!(f, "num({n})"),
             Self::Identifier(i) => write!(f, "identifier({i})"),
             Self::Return => write!(f, "return"),

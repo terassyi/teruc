@@ -9,4 +9,6 @@ pub enum Error {
     UnexpectedToken(Token, Token),
     #[error("invalid termination")]
     InvalidTermination,
+    #[error("too many arguments for {0}")]
+    TooManyArguments(String),
 }
