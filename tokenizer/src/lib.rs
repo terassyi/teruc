@@ -259,6 +259,7 @@ mod tests {
         ),
         case("{}", vec![Token::OpenBrace, Token::CloseBrace]),
         case("{a = 0;}", vec![Token::OpenBrace, Token::Identifier("a".to_string()), Token::Assignment, Token::Num(0), Token::Semicolon, Token::CloseBrace]),
+        case("foo()", vec![Token::Identifier("foo".to_string()), Token::OpenParen, Token::CloseParen]),
     )]
     fn test_tokenizer_process(input: &str, expect: Vec<Token>) {
         let tokenizer = Tokenizer::default();

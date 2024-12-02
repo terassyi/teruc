@@ -22,7 +22,9 @@ relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 add        = mul ("+" mul | "-" mul)*
 mul        = unary ("*" unary | "/" unary)*
 unary      = ("+" | "-")? primary
-primary    = num | ident | "(" expr ")"
+primary    = num
+                | ident ("(" ")")?
+                | "(" expr ")"
  */
 
 #[derive(Debug)]
@@ -374,7 +376,11 @@ impl Parser {
         }
     }
 
-    // primary = num | ident | "(" expr ")"
+    /*
+    primary = num
+                | ident ("(" ")")?
+                | "(" expr ")"
+    */
     fn primary(&mut self) -> Result<Node, Error> {
         if let Some(t) = self.tokens.front() {
             if t.eq(&Token::OpenParen) {
@@ -391,26 +397,32 @@ impl Parser {
                 } else {
                     Err(Error::InvalidTermination)
                 }
-            } else {
-                // expect number
-                if let Some(t) = self.tokens.pop_front() {
-                    match t {
-                        Token::Num(n) => Ok(Node::new_num(n)),
-                        Token::Identifier(s) => {
-                            if let Some(offset) = self.find_local_var(&s) {
-                                Ok(Node::new_local_var(s, offset))
-                            } else {
-                                let offset = self.local_val_offset * 8;
-                                self.local_val_offset += 1;
-                                self.local_vars.insert(s.clone(), offset);
-                                Ok(Node::new_local_var(s, offset))
+            } else if let Some(t) = self.tokens.pop_front() {
+                match t {
+                    Token::Num(n) => Ok(Node::new_num(n)),
+                    Token::Identifier(s) => {
+                        // func
+                        if let Some(tt) = self.tokens.front() {
+                            if tt.eq(&Token::OpenParen) {
+                                self.consume(Token::OpenParen)?;
+                                self.consume(Token::CloseParen)?;
+                                return Ok(Node::new(NodeKind::Func(s), None, None)); // TODO: implement lhs and rhs
                             }
                         }
-                        _ => Err(Error::InvalidToken(t)),
+                        // ident
+                        if let Some(offset) = self.find_local_var(&s) {
+                            Ok(Node::new_local_var(s, offset))
+                        } else {
+                            let offset = self.local_val_offset * 8;
+                            self.local_val_offset += 1;
+                            self.local_vars.insert(s.clone(), offset);
+                            Ok(Node::new_local_var(s, offset))
+                        }
                     }
-                } else {
-                    Err(Error::InvalidTermination)
+                    _ => Err(Error::InvalidToken(t)),
                 }
+            } else {
+                Err(Error::InvalidTermination)
             }
         } else {
             Err(Error::InvalidTermination)
@@ -577,6 +589,10 @@ mod tests {
                 Node::new(NodeKind::Assignment, Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2))), Some(Box::new(Node::new_num(1)))),
                 Node::new(NodeKind::Return, Some(Box::new(Node::new(NodeKind::Add, Some(Box::new(Node::new_local_var("a".to_string(), 8))), Some(Box::new(Node::new_local_var("b".to_string(), 8 * 2)))))), None),
             ]), None, None)],
+        ),
+        case(
+            vec![Token::Identifier("foo".to_string()), Token::OpenParen, Token::CloseParen, Token::Semicolon],
+            vec![Node::new(NodeKind::Func("foo".to_string()), None, None)],
         ),
     )]
     fn test_parser_parse(input: Vec<Token>, expect: Vec<Node>) {

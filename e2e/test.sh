@@ -21,6 +21,21 @@ assert() {
   fi
 }
 
+assert_with_output() {
+  expected="$1"
+  input="$2"
+  e2e/teruc "$input" > tmp.s
+  cc -c e2e/foo.c -o foo.o
+  cc foo.o tmp.s -o tmp
+  output=$(./tmp)
+  if [ "$output" == "$expected" ]; then
+    echo "$input => $output"
+  else
+    echo "$input => $expected" is expected, but got "$output"
+    exit 1
+  fi
+}
+
 assert 0 '0;'
 assert 42 '42;'
 
@@ -41,4 +56,5 @@ assert 1 'a = 1; if (a == 0) return 0; else return 1;'
 assert 1 'a = 1; if (a == 0) return 0; else if (a == 1) return 1; else return 2;'
 assert 10 'a = 0; while (a != 10) a = a + 1; return a;'
 assert 10 'b = 0; for(a = 0; a < 10; a = a + 1) b = b + 1; return b;'
+assert_with_output "hello from foo" "foo();"
 echo OK

@@ -146,6 +146,10 @@ impl Generator {
                 }
                 return Ok(());
             }
+            NodeKind::Func(f) => {
+                println!("\tcall {}", f);
+                return Ok(());
+            }
             _ => {}
         }
 

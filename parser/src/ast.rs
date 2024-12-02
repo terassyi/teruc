@@ -25,6 +25,7 @@ pub enum NodeKind {
     While,
     For,
     Block(Vec<Node>),
+    Func(String),
 }
 
 impl TryFrom<Token> for NodeKind {
@@ -76,6 +77,7 @@ impl Display for NodeKind {
             NodeKind::While => write!(f, "While"),
             NodeKind::For => write!(f, "For"),
             NodeKind::Block(_) => write!(f, "Block"),
+            NodeKind::Func(s) => write!(f, "Func({s})"),
         }
     }
 }
